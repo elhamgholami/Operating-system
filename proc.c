@@ -110,7 +110,8 @@ allocproc(void)
 {
   struct proc *p;
   char *sp;
-
+  //modified
+  p->isthread = 0; // Default to not a thread, set to 1 for threads
   acquire(&ptable.lock);
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
@@ -581,4 +582,98 @@ procdump(void)
     }
     cprintf("\n");
   }
+}
+
+int clone(void (*func)(void*, void*), void *index, void *size, void *stack) {
+    // Get the current thread and some space for the new thread
+    struct proc *current_thread = myproc();
+    struct proc *new_thread;
+
+    // Ask the system for some space for the new thread
+    new_thread = allocproc();
+    // If the computer says no, give up and return -1
+    if (new_thread == 0) {
+        return -1;
+    }
+
+    // Copy some information from the current thread to the new thread
+    // This includes the memory, the parent, and the state
+    new_thread->pgdir = current_thread->pgdir;
+    new_thread->sz = current_thread->sz;
+    new_thread->parent = current_thread;
+    *new_thread->tf = *current_thread->tf;
+
+    // Set up a new stack for the new thread
+    // This is where the new thread can store some notes
+    uint sp = (uint)stack + PGSIZE;
+    sp -= 12;
+    *(uint*)(sp + 8) = (uint)size;
+    //The first element of the stack is pointer to thread
+    *(uint*)(sp + 4) = (uint)index;
+    //The second element of the stack is pointer to size of the stack
+    *(uint*)sp = 0xffffffff;
+    // The stack pointer is set to something random
+    new_thread->tf->eip = (uint)func;
+    new_thread->tf->esp = sp;
+
+    // Copy the files that the current thread can access from the current_thread
+    for (int i = 0; i < NOFILE; i++) {
+        if (current_thread->ofile[i])
+            new_thread->ofile[i] = filedup(current_thread->ofile[i]);
+    }
+    // Copy the current working directory
+    new_thread->cwd = idup(current_thread->cwd);
+
+    // Give the new thread the same name as the current thread
+    safestrcpy(new_thread->name, current_thread->name, sizeof(current_thread->name));
+
+    // Lock the table that keeps track of all the threads
+    acquire(&ptable.lock);
+    // Mark the new thread as ready to run
+    new_thread->state = RUNNABLE;
+    // Unlock the table
+    release(&ptable.lock);
+
+    // Return the ID of the new thread
+    return new_thread->pid;
+}
+??
+int join(void) {
+    struct proc *p;
+    int havekids, pid;
+    struct proc *curproc = myproc();
+
+    acquire(&ptable.lock);
+    for(;;){
+        // Scan through table looking for exited children.
+        havekids = 0;
+        for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+            if(p->parent != curproc || p->isthread == 0)
+                continue;
+            havekids = 1;
+            if(p->state == ZOMBIE){
+                // Found one.
+                pid = p->pid;
+                kfree(p->kstack);
+                p->kstack = 0;
+                freevm(p->pgdir);
+                p->pid = 0;
+                p->parent = 0;
+                p->name[0] = 0;
+                p->killed = 0;
+                p->state = UNUSED;
+                release(&ptable.lock);
+                return pid;
+            }
+        }
+
+        // No point waiting if we don't have any children.
+        if(!havekids || curproc->killed){
+            release(&ptable.lock);
+            return -1;
+        }
+
+        // Wait for children to exit.  (See wakeup1 call in proc_exit.)
+        sleep(curproc, &ptable.lock);  //DOC: wait-sleep
+    }
 }

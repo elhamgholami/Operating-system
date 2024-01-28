@@ -89,3 +89,20 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+int sys_clone(void) {
+  // Get pointer of index, size and stack(the place of it) from the user 
+  // It is actually mapped to what user gives in user.h
+    char *fcn, *arg1, *arg2, *stack;
+    if (argptr(0, &fcn, sizeof(char *)) < 0 ||
+        argptr(1, &arg1, sizeof(char *)) < 0 ||
+        argptr(2, &arg2, sizeof(char *)) < 0 ||
+        argptr(3, &stack, sizeof(char *)) < 0) {
+        return -1;
+    }
+
+    return clone((void(*)(void*, void*))fcn, arg1, arg2, stack);
+}
+
+int sys_join(void) {
+    return join();
+}
