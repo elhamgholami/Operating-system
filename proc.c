@@ -7,6 +7,41 @@
 #include "proc.h"
 #include "spinlock.h"
 
+
+//starting to implement Red Black Tree Structure
+enum rb_color { RED, BLACK };
+
+struct rb_node {
+    struct proc *process;          // Pointer to the associated process
+    int virtual_runtime;           // Virtual runtime of the process
+    struct rb_node *left;          // Pointer to the left child
+    struct rb_node *right;         // Pointer to the right child
+    struct rb_node *parent;        // Pointer to the parent node
+    enum rb_color color;           // Color of the node (RED or BLACK)
+};
+
+void rb_tree_insert(struct proc *p) {
+    // Insert process based on virtual runtime
+}
+
+void rb_tree_delete(struct proc *p) {
+    // Remove process from the tree
+}
+
+struct proc* rb_tree_find_min() {
+    // Find and return the process with the smallest virtual runtime
+}
+
+
+
+
+
+
+
+
+
+
+
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
@@ -332,24 +367,39 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
-        continue;
+    p = rb_tree_find_min();
+    if (p) 
+    {
+        // Process found, switch to it
 
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
+        // Make sure the process is in the right state
+        if(p->state != RUNNABLE)
+            panic("Non-runnable process in Red-Black Tree");
 
-      swtch(&(c->scheduler), p->context);
-      switchkvm();
+        // Switch to chosen process
+        c->proc = p;
+        switchuvm(p);
+        p->state = RUNNING;
 
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      c->proc = 0;
+        swtch(&(c->scheduler), p->context);
+        switchkvm();
+
+        // Process is done running for now
+        // It should have changed its p->state before coming back
+
+        // Update the process's virtual runtime
+        update_virtual_runtime(p);
+
+        // If still runnable, reinsert in the tree
+        if (p->state == RUNNABLE)
+            rb_tree_insert(p);
+
+
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
+        c->proc = 0;
     }
+
     release(&ptable.lock);
 
   }
