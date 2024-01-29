@@ -51,11 +51,6 @@ struct proc {
   char name[16];               // Process name (debugging)
 
 
-  //modified
-  int virtual_runtime;
-  struct rb_node *rb_node; // Pointer to the corresponding Red-Black Tree node
-
-  //modified
   int isthread; //to distinguish between thread and process
 };
 

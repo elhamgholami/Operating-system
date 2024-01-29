@@ -8,40 +8,6 @@
 #include "spinlock.h"
 
 
-//starting to implement Red Black Tree Structure
-enum rb_color { RED, BLACK };
-
-struct rb_node {
-    struct proc *process;          // Pointer to the associated process
-    int virtual_runtime;           // Virtual runtime of the process
-    struct rb_node *left;          // Pointer to the left child
-    struct rb_node *right;         // Pointer to the right child
-    struct rb_node *parent;        // Pointer to the parent node
-    enum rb_color color;           // Color of the node (RED or BLACK)
-};
-
-void rb_tree_insert(struct proc *p) {
-    // Insert process based on virtual runtime
-}
-
-void rb_tree_delete(struct proc *p) {
-    // Remove process from the tree
-}
-
-struct proc* rb_tree_find_min() {
-    // Find and return the process with the smallest virtual runtime
-}
-
-
-
-
-
-
-
-
-
-
-
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
@@ -637,7 +603,7 @@ int clone(void (*func)(void*, void*), void *index, void *size, void *stack) {
     // Return the ID of the new thread
     return new_thread->pid;
 }
-??
+
 int join(void) {
     struct proc *p;
     int havekids, pid;
