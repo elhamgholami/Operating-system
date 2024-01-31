@@ -1,4 +1,5 @@
 // Per-CPU state
+#define MAX_THREADS 10
 struct cpu {
   uchar apicid;                // Local APIC ID
   struct context *scheduler;   // swtch() here to enter scheduler
@@ -39,6 +40,7 @@ struct proc {
   uint sz;                     // Size of process memory (bytes)
   pde_t* pgdir;                // Page table
   char *kstack;                // Bottom of kernel stack for this process
+  void *threadstack;           // Address of thread stack to be freed
   enum procstate state;        // Process state
   int pid;                     // Process ID
   struct proc *parent;         // Parent process
@@ -48,10 +50,11 @@ struct proc {
   int killed;                  // If non-zero, have been killed
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
-  char name[16];               // Process name (debugging)
+  char name[16];               // Process name (debugging)  
 
-
-  int isthread; //to distinguish between thread and process
+  struct proc *thread_queue[MAX_THREADS];
+  int thread_count;            
+  int next_thread;
 };
 
 // Process memory is laid out contiguously, low addresses first:
